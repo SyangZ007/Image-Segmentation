@@ -547,5 +547,7 @@ print('successfully build model!')
 
 if __name__=='main':
     model=U2NET()
+    x=tf.random.normal((1,320,320,3))
+    out=model(x)
     print('successfully build model!')
     print(model.summary())
