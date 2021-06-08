@@ -1,3 +1,6 @@
+'''
+This code refers to https://github.com/xuebinqin/U-2-Net
+'''
 import tensorflow as tf
 from tensorflow.keras import layers,Model,Sequential
 from tensorflow.keras.activations import sigmoid
@@ -530,14 +533,14 @@ print('successfully build model!')
 # model.summary()
 
 #################standard U2-Net model########################
-model_mini=U2NET_Mini()
-x=tf.random.normal((1,320,320,3))
-out=model_mini(x)
+#model_mini=U2NET_Mini()
+#x=tf.random.normal((1,320,320,3))
+#out=model_mini(x)
 
-for out_ in out:
-    print(out_.shape) 
+#for out_ in out:
+    #print(out_.shape) 
 
-model_mini.summary()
+#model_mini.summary()
 # Total params: 1,115,597
 # Trainable params: 1,109,901
 # Non-trainable params: 5,696
