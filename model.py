@@ -515,7 +515,7 @@ class U2NET_Mini(Model):
 
         d0 = self.outconv(tf.concat([d1,d2,d3,d4,d5,d6],-1))
 
-        return tf.stack((sigmoid(d0), sigmoid(d1), sigmoid(d2), sigmoid(d3), sigmoid(d4), sigmoid(d5), sigmoid(d6)])
+        return tf.stack([sigmoid(d0), sigmoid(d1), sigmoid(d2), sigmoid(d3), sigmoid(d4), sigmoid(d5), sigmoid(d6)])
 
 print('successfully build model!')
 
