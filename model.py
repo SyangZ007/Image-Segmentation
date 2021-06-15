@@ -3,7 +3,7 @@ This code refers to https://github.com/xuebinqin/U-2-Net
 '''
 import tensorflow as tf
 from tensorflow.keras import layers,Model,Sequential
-from tensorflow.keras.activations import sigmoid
+from tensorflow.keras.activations import sigmoid,softmax
 
 class REBNCONV(layers.Layer):
     '''卷积块：Conv+BN+Relu>>>某些层可能会使用空洞卷积'''
@@ -424,9 +424,10 @@ class U2NET(Model):
 ### U^2-Net small ###
 class U2NET_Mini(Model):
     '''mini U2-Net'''
-    def __init__(self,in_ch=3,out_ch=1):
+    def __init__(self,in_ch=3,out_ch=1,mode='muti_class'):
         super(U2NET_Mini,self).__init__()
 
+        self.mode   = mode
         self.stage1 = RSU7(in_ch,16,64)
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
 
@@ -515,6 +516,10 @@ class U2NET_Mini(Model):
 
         d0 = self.outconv(tf.concat([d1,d2,d3,d4,d5,d6],-1))
 
+        if self.mode=='muti_class':
+            #多类别语义分割
+            return tf.stack([softmax(d0), softmax(d1), softmax(d2), softmax(d3), softmax(d4), softmax(d5), softmax(d6)])
+        
         return tf.stack([sigmoid(d0), sigmoid(d1), sigmoid(d2), sigmoid(d3), sigmoid(d4), sigmoid(d5), sigmoid(d6)])
 
 print('successfully build model!')
