@@ -424,7 +424,7 @@ class U2NET(Model):
 ### U^2-Net small ###
 class U2NET_Mini(Model):
     '''mini U2-Net'''
-    def __init__(self,in_ch=3,out_ch=1,mode='muti_class'):
+    def __init__(self,in_ch=3,out_ch=1,mode='binary_class'):
         super(U2NET_Mini,self).__init__()
 
         self.mode   = mode
