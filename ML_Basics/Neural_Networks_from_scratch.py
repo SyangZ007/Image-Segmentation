@@ -1,11 +1,9 @@
-# %% [code] {"execution":{"iopub.status.busy":"2021-06-25T08:55:39.832538Z","iopub.execute_input":"2021-06-25T08:55:39.832892Z","iopub.status.idle":"2021-06-25T08:55:46.653200Z","shell.execute_reply.started":"2021-06-25T08:55:39.832814Z","shell.execute_reply":"2021-06-25T08:55:46.652402Z"}}
+'''use low level API to build a Neural networks,then training with data'''
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from tensorflow.keras.datasets import fashion_mnist
 
-
-# %% [code]
 (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
 #归一化
 x_train = x_train.astype('float32') / 255.
@@ -15,7 +13,6 @@ print(x_train.shape,x_test.shape)
 train_set=tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(60000).batch(128)
 test_set=tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(128)
 
-# %% [code] {"jupyter":{"outputs_hidden":true}}
 #创建一个隐藏层数为2的神经网络 
 #网络结构：[b,28*28] => [b,256] => [b,128] => [b,10]
 #创建tf.Variable类型的网络各训练参数
@@ -26,13 +23,10 @@ b2 = tf.Variable(tf.zeros((128)))#bias intialize to 0
 w3 = tf.Variable(tf.random.normal(shape=(128,10),stddev=0.1))#kernel1
 b3 = tf.Variable(tf.zeros((10)))#bias intialize to 0
 
-# %% [markdown]
-# **build networks and training**
-
-# %% [code] {"execution":{"iopub.status.busy":"2021-06-25T09:36:56.128303Z","iopub.execute_input":"2021-06-25T09:36:56.128649Z","iopub.status.idle":"2021-06-25T09:37:39.181510Z","shell.execute_reply.started":"2021-06-25T09:36:56.128622Z","shell.execute_reply":"2021-06-25T09:37:39.180583Z"},"jupyter":{"outputs_hidden":true}}
+############################**build networks and training**##############
 lr=1e-3
 epochs=10
-loss_fn=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+loss_fn=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)#接受logits输出
 
 #@tf.function
 def train(epochs=10,lr=1e-3):
@@ -41,7 +35,7 @@ def train(epochs=10,lr=1e-3):
         for step,(x,y) in enumerate(train_set):
             x = tf.reshape(x,(-1,28*28))#flatten
             with tf.GradientTape() as tape:
-                #tf.GradientTape只能对tf.variable类型跟踪求导，否则tape.watch()
+                #tf.GradientTape只能对tf.variable类型跟踪求导，否则需要使用tape.watch(tf.tensor)
                 h = tf.nn.relu(x@w1 + b1) #auto broadcast.h:[b,256]
                 h = tf.nn.relu(h@w2 + b2) #h:[b,128]
                 y_pred = h@w3 + b3 #h:[b,10] 线性输出logits,from_logits=True
@@ -67,6 +61,5 @@ def train(epochs=10,lr=1e-3):
 
 train_loss=train(epochs,lr)
 
-# %% [code] {"execution":{"iopub.status.busy":"2021-06-25T09:38:34.578458Z","iopub.execute_input":"2021-06-25T09:38:34.578779Z","iopub.status.idle":"2021-06-25T09:38:34.957851Z","shell.execute_reply.started":"2021-06-25T09:38:34.578753Z","shell.execute_reply":"2021-06-25T09:38:34.956830Z"}}
 plt.plot(train_loss)
 
