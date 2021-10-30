@@ -228,17 +228,19 @@ class RSU4F(Model):
         return hx1d + hxin
 #上采样块
 class DecodeBlock(Model):
-    '''ConvBN+ConvBN形式。指定DecodeBlock上采样块的通道数，上采样块不改变输入输出通道数'''
-    def __init__(self, num_filters=3):
+    '''ConvBN+ConvBN形式。指定DecodeBlock上采样块的通道数，上采样通道数不变==>卷积块通道数压缩为1/2'''
+    def __init__(self, num_filters):
         super(DecodeBlock,self).__init__()
         #两种上采样方式，通过UPSampling2D或者转置卷积实现
-        #self.up=layers.Conv2DTranspose(filters=num_filters, kernel_size=3, strides=2, padding='same',activation='relu')
-        self.conv_block=Sequential([layers.Conv2D(num_filters,kernel_size=3,padding='same',use_bias=False),
-                  layers.BatchNormalization(),layers.ReLU(),
-                  layers.Conv2D(num_filters,kernel_size=3,padding='same',use_bias=False),
-                  layers.BatchNormalization(),layers.ReLU()])
-    def call(self,x):#完成上采样后的DecodeBlock
-        return self.conv_block(x)
+        self.upsample=layers.Conv2DTranspose(filters=num_filters,kernel_size=3,strides=2,padding='same',activation='relu')
+        self.conv_block=Sequential([layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False),
+                  layers.BatchNormalization(),layers.Activation('relu'),
+                  layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False),
+                  layers.BatchNormalization(),layers.Activation('relu')])
+        self.concat=layers.Concatenate(axis=-1)
+    def call(self,x,skip_x):#完成上采样后的DecodeBlock
+        x=self.upsample(x)
+        return self.conv_block(self.concat([x,skip_x]))
 #Attention Block
 class AttentionBlock(Model):
     '''
@@ -271,7 +273,7 @@ class AttentionBlock(Model):
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
     上采样到统一尺度输出最终mask
-    超参数设计：编码[32,64,128,128,256]+解码通道数变化[256,128,128,64,32]'''
+    超参数设计：编码[32,64,128,128,256,512]+解码通道数变化[256,128,128,64,32]'''
     def __init__(self,in_ch=3,out_ch=4):
         super(RSUNET,self).__init__()
         self.stage1 = RSU7(in_ch,16,32)#size:b*h*w*64
@@ -282,22 +284,16 @@ class RSUNET(Model):
         self.pool34 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage4 = RSU4(64,16,128)
         self.pool45 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage5 = RSU4F(128,16,128)
+        self.stage5 = RSU4F(128,16,256)
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage6 = RSU4F(128,16,256)
+        self.stage6 = RSU4F(256,16,512)
         # attention block
         self.attention1 = AttentionBlock(256)
         self.attention2 = AttentionBlock(128)
         self.attention3 = AttentionBlock(128)
         self.attention4 = AttentionBlock(64)
         self.attention5 = AttentionBlock(32)
-        # decoder 五个上采样块   
-        self.conv_transpose5=layers.Conv2DTranspose(256,kernel_size=3,strides=2,padding='same',activation='relu')
-        self.conv_transpose4=layers.Conv2DTranspose(128,kernel_size=3,strides=2,padding='same',activation='relu')
-        self.conv_transpose3=layers.Conv2DTranspose(128,kernel_size=3,strides=2,padding='same',activation='relu')
-        self.conv_transpose2=layers.Conv2DTranspose(64,kernel_size=3,strides=2,padding='same',activation='relu')
-        self.conv_transpose1=layers.Conv2DTranspose(32,kernel_size=3,strides=2,padding='same',activation='relu')
-    
+        # decoder 五个上采样块 transposed_conv + conv_block   
         self.stage5d = DecodeBlock(256)
         self.stage4d = DecodeBlock(128)
         self.stage3d = DecodeBlock(128)
@@ -334,36 +330,31 @@ class RSUNET(Model):
         hx6_side = _upsample_like(hx6_side,hx1,mode='normal')
 
         hx5 = self.attention1(hx5,hx6)#经attention处理后的skip connection
-        hx6up= self.conv_transpose5(hx6)#转置卷积实现二倍上采样
-        hx5d = self.stage5d(tf.concat([hx6up,hx5],-1))#解码stage1：b*8*50*c
+        
+        hx5d = self.stage5d(hx6,hx5)#解码stage1：b*8*50*c
         hx5_side = self.side5(hx5d)#解码网络尺度5旁路输出
         hx5_side = _upsample_like(hx5_side,hx1,mode='normal')
         
         hx4 = self.attention2(hx4,hx5d)#经attention处理后的skip connection
-        hx5up= self.conv_transpose4(hx5d)#转置卷积实现二倍上采样
-        hx4d = self.stage4d(tf.concat([hx5up,hx4],-1))#解码stage2：b*16*100*c
+        hx4d = self.stage4d(hx5d,hx4)#解码stage2：b*16*100*c
         hx4_side = self.side4(hx4d)#解码网络尺度4旁路输出
         hx4_side = _upsample_like(hx4_side,hx1,mode='normal')
 
         hx3 = self.attention3(hx3,hx4d)#经attention处理后的skip connection
-        hx4up= self.conv_transpose3(hx4d)#转置卷积实现二倍上采样
-        hx3d = self.stage3d(tf.concat([hx4up,hx3],-1))#解码stage3：b*32*200*c
+        hx3d = self.stage3d(hx4d,hx3)#解码stage3：b*32*200*c
         hx3_side = self.side3(hx3d)#解码网络尺度3旁路输出
         hx3_side = _upsample_like(hx3_side,hx1,mode='normal')
 
         hx2 = self.attention4(hx2,hx3d)#经attention处理后的skip connection
-        hx3up= self.conv_transpose2(hx3d)#转置卷积实现二倍上采样
-        hx2d = self.stage2d(tf.concat([hx3up,hx2],-1))#解码stage4：b*64*400*c
+        hx2d = self.stage2d(hx3d,hx2)#解码stage4：b*64*400*c
         hx2_side = self.side2(hx2d)#解码网络尺度2旁路输出
         hx2_side = _upsample_like(hx2_side,hx1,mode='normal')
 
         hx1 = self.attention5(hx1,hx2d)#经attention处理后的skip connection
-        hx2up= self.conv_transpose1(hx2d)#转置卷积实现二倍上采样
-        hx1d = self.stage1d(tf.concat([hx2up,hx1],-1))#解码stage5：b*128*800*c
+        hx1d = self.stage1d(hx2d,hx1)#解码stage5：b*128*800*c
         #解码网络尺度1无需旁路输出
         hx1_side = self.side1(hx1d)
         
         return self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#sigmoid激活输出
-      
 #创建RSU-NET
 model=RSUNET(in_ch=3,out_ch=4)#num_class=4
