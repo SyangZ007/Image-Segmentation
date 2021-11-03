@@ -259,16 +259,16 @@ class AttentionBlock(Model):
         self.upsampling=layers.UpSampling2D(size=(2,2))
         self.multiply=layers.Multiply()
     def call(self,x,gate):
-      phi_g=self.conv1(gate)#[b,w/2,h/2,c_mid]
-      theta_x=self.conv2(x)#[b,w/2,h/2,c_mid]
-      #attention权值矩阵weight_x
-      weight_x=self.add([phi_g,theta_x])
-      weight_x=self.act1(weight_x)
-      weight_x=self.conv3(weight_x)#[b,w/2,h/2,1]
-      weight_x=self.act2(weight_x)#sigmoid输出0~1权值矩阵
-      weight_x=self.upsampling(weight_x)#[b,w,h,1]
-      weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
-      return self.multiply([weight_x,x])
+        phi_g=self.conv1(gate)#[b,w/2,h/2,c_mid]
+        theta_x=self.conv2(x)#[b,w/2,h/2,c_mid]
+        #attention权值矩阵weight_x
+        weight_x=self.add([phi_g,theta_x])
+        weight_x=self.act1(weight_x)
+        weight_x=self.conv3(weight_x)#[b,w/2,h/2,1]
+        weight_x=self.act2(weight_x)#sigmoid输出0~1权值矩阵
+        weight_x=self.upsampling(weight_x)#[b,w,h,1]
+        weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
+        return self.multiply([weight_x,x])
 ##############################U^2-Net###########################
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
