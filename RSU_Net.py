@@ -269,7 +269,7 @@ class AttentionBlock(Model):
         weight_x=self.upsampling(weight_x)#[b,w,h,1]
         weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
         return self.multiply([weight_x,x])
-##############################U^2-Net###########################
+##############################RSU-Net###########################
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
     上采样到统一尺度输出最终mask
@@ -356,5 +356,72 @@ class RSUNET(Model):
         hx1_side = self.side1(hx1d)
         
         return self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#sigmoid激活输出
+##############################Auto-Encoder###########################
+#Auto-Encoder上采样块
+class Auto_DecodeBlock(Model):
+    '''Auto_DecodeBlock，无skip connection'''
+    def __init__(self, num_filters):
+        super(Auto_DecodeBlock,self).__init__()
+        self.conv_block=Sequential([layers.Conv2DTranspose(filters=num_filters,kernel_size=3,strides=2,padding='same',activation='relu'),
+                  layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False),
+                  layers.BatchNormalization(),layers.Activation('relu'),
+                  layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False),
+                  layers.BatchNormalization(),layers.Activation('relu')])
+    def call(self,x):#完成上采样后的DecodeBlock
+        return self.conv_block(x)
+class AutoEncoder(Model):
+    '''根据RSU-Net的结构搭建AutoEncoder，提取其encoder权重作为RSU-Net训练的预训练权重'''
+    def __init__(self,in_ch=3,out_ch=3):
+        super(AutoEncoder,self).__init__()
+        self.stage1 = RSU7(in_ch,16,32)#size:b*h*w*64
+        self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
+        self.stage2 = RSU6(32,16,64)
+        self.pool23 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
+        self.stage3 = RSU5(64,16,64)
+        self.pool34 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
+        self.stage4 = RSU4(64,16,128)
+        self.pool45 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
+        self.stage5 = RSU4F(128,16,256)
+        self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
+        self.stage6 = RSU4F(256,16,512)
+        # AutoEncoder不需要attention，skip connection，旁路输出分支
+        # decoder 五个上采样块 transposed_conv + conv_block   
+        self.stage5d = Auto_DecodeBlock(256)
+        self.stage4d = Auto_DecodeBlock(128)
+        self.stage3d = Auto_DecodeBlock(128)
+        self.stage2d = Auto_DecodeBlock(64)
+        self.stage1d = Auto_DecodeBlock(32)
+        
+        self.outconv = layers.Conv2D(out_ch,kernel_size=1,activation='sigmoid')#输出层1*1卷积调整通道数，padding='valid'
+    def call(self,x):
+        #stage 1
+        hx1 = self.stage1(x)#size:b*128*800*c
+        hx = self.pool12(hx1)#size:b*64*400*c
+        #stage 2
+        hx2 = self.stage2(hx)#size:b*64*400*c
+        hx = self.pool23(hx2)#size:b*32*200*c
+        #stage 3
+        hx3 = self.stage3(hx)#size:b*32*200*c
+        hx = self.pool34(hx3)#size:b*16*100*c
+        #stage 4
+        hx4 = self.stage4(hx)#size:b*16*100*c
+        hx = self.pool45(hx4)#size:b*8*50*c
+        #stage 5
+        hx5 = self.stage5(hx)#size:b*8*50*c
+        hx = self.pool56(hx5)#size:b*4*25*c
+        #stage 6 bottle neck
+        hx6 = self.stage6(hx)#size:b*4*25*c  相对于原始尺寸32倍下采样
+        #decoder解码器部分
+        hx5d = self.stage5d(hx6)#解码stage1：b*8*50*c
+        hx4d = self.stage4d(hx5d)#解码stage2：b*16*100*c
+        hx3d = self.stage3d(hx4d)#解码stage3：b*32*200*c
+        hx2d = self.stage2d(hx3d)#解码stage4：b*64*400*c
+        hx1d = self.stage1d(hx2d)#解码stage5：b*128*800*c
+        
+        return self.outconv(hx1d)#sigmoid激活输出
 #创建RSU-NET
 model=RSUNET(in_ch=3,out_ch=4)#num_class=4
+auto_encoder=AutoEncoder(in_ch=3,out_ch=3)#输入输出均为三通道图像
+######提取AutoEncoder权重初始化RSU-Net
+#for l1, l2 in zip(model.layers[:11],auto_encoder.layers[0:11]):
+    #l1.set_weights(l2.get_weights())
