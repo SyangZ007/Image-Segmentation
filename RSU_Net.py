@@ -18,7 +18,9 @@ def _upsample_like(src,tar,mode='normal'):
     '''用tf.resize实现，双线性插值上采样到目标尺寸大小,src:待上采样的feats层，tar:上采样后的尺寸与tar层相同，
       指定mode以更改上采样方式'''
     if mode=='normal':
-      src=tf.image.resize(src, size=tar.shape[1:3], method='bilinear')#双线性插值上采样到目标尺寸大小
+      print(tar.shape)
+      src=tf.image.resize(src, size=(tar.shape[1],tar.shape[2]), method='bilinear')#双线性插值上采样到目标尺寸大小
+      #src=tf.image.resize(src, size=tar.shape[1:3], method='bilinear')#双线性插值上采样到目标尺寸大小
     else:#非normal上采样，采用转置卷积，输出通道数暂定为类别数4
       src=layers.Conv2DTranspose(filters=4,kernel_size=3,strides=2,padding='same',activation='relu')(src)
     return src
