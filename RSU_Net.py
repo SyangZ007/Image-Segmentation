@@ -355,7 +355,11 @@ class RSUNET(Model):
         #解码网络尺度1无需旁路输出
         hx1_side = self.side1(hx1d)
         
-        return self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#sigmoid激活输出
+        main_op=self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#主干sigmoid激活输出
+        #return main_op#仅监督训练主干输出版本
+        
+        #多输出版，同时监督训练主干输出与多个旁路分支输出
+        return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
 ##############################Auto-Encoder###########################
 #Auto-Encoder上采样块
 class Auto_DecodeBlock(Model):
