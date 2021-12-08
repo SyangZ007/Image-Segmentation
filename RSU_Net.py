@@ -299,13 +299,13 @@ class RSUNET(Model):
         self.stage3d = DecodeBlock(128)
         self.stage2d = DecodeBlock(64)
         self.stage1d = DecodeBlock(32)
-        # decoder 6个旁路输出分支
-        self.side6 = layers.Conv2D(4,3,1,padding='same',activation='relu')
-        self.side5 = layers.Conv2D(4,3,1,padding='same',activation='relu')
-        self.side4 = layers.Conv2D(4,3,1,padding='same',activation='relu')
-        self.side3 = layers.Conv2D(4,3,1,padding='same',activation='relu')
-        self.side2 = layers.Conv2D(4,3,1,padding='same',activation='relu')
-        self.side1 = layers.Conv2D(4,3,1,padding='same',activation='relu')
+        # decoder 6个旁路输出分支,旁路输出模式：3*3卷积输出四通道特征图(线性激活)==>上采样到target size==>所有旁路输出拼接、融合==>1*1卷积、四通道sigmoid激活输出
+        self.side6 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
+        self.side5 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
+        self.side4 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
+        self.side3 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
+        self.side2 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
+        self.side1 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
         self.outconv = layers.Conv2D(out_ch,kernel_size=1,activation='sigmoid')#输出层1*1卷积调整通道数，padding='valid'
     def call(self,x):
         #stage 1
