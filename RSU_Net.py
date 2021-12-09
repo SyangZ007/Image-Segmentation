@@ -368,12 +368,12 @@ class RSUNET(Model):
         self.loss_fn = loss_fn#loss_fn计算多输出的损失，返回target_loss,total_loss
     #subclass model.fit train step
     def train_step(self, data):
-        imgs, gt_masks = data
+        #imgs, gt_masks = data
+        imgs, gt_masks = next(iter(data))
         with tf.GradientTape() as tape:
             d0, d1, d2, d3, d4, d5, d6 = self(imgs, training=True) # Forward pass
             # Compute our own loss
-            #tar_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, gt_masks)#接受主干输出+6个旁路输出，返回target_loss,total_loss
-            total_loss = tf.keras.losses.mean_squared_error(d0, gt_masks)
+            tar_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, gt_masks)#接受主干输出+6个旁路输出，返回target_loss,total_loss
         # 使用total loss计算gradients
         trainable_vars = self.trainable_variables
         grads = tape.gradient(total_loss, trainable_vars)
