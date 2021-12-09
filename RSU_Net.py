@@ -369,7 +369,7 @@ class RSUNET(Model):
     #subclass model.fit train step
     def train_step(self, data):
         imgs, gt_masks = data
-        
+        tf.print(imgs.shape)
         with tf.GradientTape() as tape:
             d0, d1, d2, d3, d4, d5, d6 = self(imgs, training=True) # Forward pass
             # Compute our own loss
@@ -379,7 +379,7 @@ class RSUNET(Model):
         grads = tape.gradient(total_loss, trainable_vars)
         # Update weights
         self.opt.apply_gradients(zip(grads, trainable_vars))
-        
+        tf.print('finished one forward pass')
         # Compute our own metrics
         #self.metrics.update_state(y, d0)
         #return {"mean iou": self.metrics.result()}
