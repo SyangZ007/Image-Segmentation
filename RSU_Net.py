@@ -367,9 +367,8 @@ class RSUNET(Model):
         #self.metrics = metrics
         self.loss_fn = loss_fn#loss_fn计算多输出的损失，返回target_loss,total_loss
     #subclass model.fit train step
-    def train_step(self, data):
+    def train_step(self, imgs, gt_masks):
         #imgs, gt_masks = data
-        imgs, gt_masks = next(iter(data))
         with tf.GradientTape() as tape:
             d0, d1, d2, d3, d4, d5, d6 = self(imgs, training=True) # Forward pass
             # Compute our own loss
