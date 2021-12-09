@@ -360,6 +360,25 @@ class RSUNET(Model):
         
         #多输出版，同时监督训练主干输出与多个旁路分支输出
         return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
+    #subclass compile
+    def compile(self, optimizer, loss_fn):
+        super(RSUNET, self).compile()
+        self.opt = optimizer
+        self.loss_fn = loss_fn#loss_fn计算多输出的损失，返回target_loss,total_loss
+    #subclass model.fit train step
+    def train_step(self, data):
+        x, y = data3
+        
+        with tf.GradientTape() as tape:
+            d0, d1, d2, d3, d4, d5, d6 = self(x, training=True) # Forward pass
+            # Compute our own loss
+            tar_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, y_pred)#接受主干输出+6个旁路输出，返回target_loss,total_loss
+        # 使用total loss计算gradients
+        trainable_vars = self.trainable_variables
+        grads = tape.gradient(total_loss, trainable_vars)
+        # Update weights
+        self.opt.apply_gradients(zip(grads, trainable_vars))
+        
 ##############################Auto-Encoder###########################
 #Auto-Encoder上采样块
 class Auto_DecodeBlock(Model):
