@@ -369,17 +369,16 @@ class RSUNET(Model):
     #subclass model.fit train step
     def train_step(self, data):
         imgs, gt_masks = data
-        tf.print(imgs.shape)
         with tf.GradientTape() as tape:
             d0, d1, d2, d3, d4, d5, d6 = self(imgs, training=True) # Forward pass
             # Compute our own loss
-            tar_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, gt_masks)#接受主干输出+6个旁路输出，返回target_loss,total_loss
+            #tar_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, gt_masks)#接受主干输出+6个旁路输出，返回target_loss,total_loss
+            total_loss = tf.keras.losses.mean_squared_error(d0, gt_masks)
         # 使用total loss计算gradients
         trainable_vars = self.trainable_variables
         grads = tape.gradient(total_loss, trainable_vars)
         # Update weights
         self.opt.apply_gradients(zip(grads, trainable_vars))
-        tf.print('finished one forward pass')
         # Compute our own metrics
         #self.metrics.update_state(y, d0)
         #return {"mean iou": self.metrics.result()}
