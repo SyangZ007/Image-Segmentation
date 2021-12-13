@@ -288,8 +288,8 @@ class RSUNET(Model):
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage6 = RSU4F(256,16,512)
         # attention block
-        self.attention1 = AttentionBlock(256)
-        self.attention2 = AttentionBlock(128)
+        self.attention1 = AttentionBlock(512)
+        self.attention2 = AttentionBlock(256)
         self.attention3 = AttentionBlock(128)
         self.attention4 = AttentionBlock(64)
         self.attention5 = AttentionBlock(32)
