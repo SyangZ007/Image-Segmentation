@@ -294,8 +294,8 @@ class RSUNET(Model):
         self.attention4 = AttentionBlock(64)
         self.attention5 = AttentionBlock(32)
         # decoder 五个上采样块 transposed_conv + conv_block   
-        self.stage5d = DecodeBlock(256)
-        self.stage4d = DecodeBlock(128)
+        self.stage5d = DecodeBlock(512)
+        self.stage4d = DecodeBlock(256)
         self.stage3d = DecodeBlock(128)
         self.stage2d = DecodeBlock(64)
         self.stage1d = DecodeBlock(32)
