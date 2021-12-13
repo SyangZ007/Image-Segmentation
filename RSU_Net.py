@@ -276,26 +276,26 @@ class RSUNET(Model):
     超参数设计：编码[32,64,128,128,256,512]+解码通道数变化[256,128,128,64,32]'''
     def __init__(self,in_ch=3,out_ch=4):
         super(RSUNET,self).__init__()
-        self.stage1 = RSU7(in_ch,16,32)#size:b*h*w*64
+        self.stage1 = RSU7(in_ch,32,64)#size:b*h*w*64
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage2 = RSU6(32,16,64)
+        self.stage2 = RSU6(64,32,128)
         self.pool23 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage3 = RSU5(64,16,64)
+        self.stage3 = RSU5(128,32,256)
         self.pool34 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage4 = RSU4(64,16,128)
+        self.stage4 = RSU4(256,32,256)
         self.pool45 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage5 = RSU4F(128,16,256)
+        self.stage5 = RSU4F(256,32,256)
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage6 = RSU4F(256,16,512)
+        self.stage6 = RSU4F(256,32,512)
         # attention block
-        self.attention1 = AttentionBlock(512)
-        self.attention2 = AttentionBlock(256)
+        self.attention1 = AttentionBlock(256)
+        self.attention2 = AttentionBlock(128)
         self.attention3 = AttentionBlock(128)
         self.attention4 = AttentionBlock(64)
         self.attention5 = AttentionBlock(32)
         # decoder 五个上采样块 transposed_conv + conv_block   
-        self.stage5d = DecodeBlock(512)
-        self.stage4d = DecodeBlock(256)
+        self.stage5d = DecodeBlock(256)
+        self.stage4d = DecodeBlock(128)
         self.stage3d = DecodeBlock(128)
         self.stage2d = DecodeBlock(64)
         self.stage1d = DecodeBlock(32)
