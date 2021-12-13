@@ -280,25 +280,25 @@ class RSUNET(Model):
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage2 = RSU6(64,32,128)
         self.pool23 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage3 = RSU5(128,32,256)
+        self.stage3 = RSU5(128,64,256)
         self.pool34 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage4 = RSU4(256,32,256)
+        self.stage4 = RSU4(256,64,256)
         self.pool45 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage5 = RSU4F(256,32,256)
+        self.stage5 = RSU4F(256,128,256)
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage6 = RSU4F(256,32,512)
+        self.stage6 = RSU4F(256,128,512)
         # attention block
-        self.attention1 = AttentionBlock(256)
-        self.attention2 = AttentionBlock(128)
-        self.attention3 = AttentionBlock(128)
+        self.attention1 = AttentionBlock(128)
+        self.attention2 = AttentionBlock(64)
+        self.attention3 = AttentionBlock(64)
         self.attention4 = AttentionBlock(64)
-        self.attention5 = AttentionBlock(32)
+        self.attention5 = AttentionBlock(64)
         # decoder 五个上采样块 transposed_conv + conv_block   
-        self.stage5d = DecodeBlock(256)
-        self.stage4d = DecodeBlock(128)
-        self.stage3d = DecodeBlock(128)
+        self.stage5d = DecodeBlock(128)
+        self.stage4d = DecodeBlock(64)
+        self.stage3d = DecodeBlock(64)
         self.stage2d = DecodeBlock(64)
-        self.stage1d = DecodeBlock(32)
+        self.stage1d = DecodeBlock(64)
         # decoder 6个旁路输出分支,旁路输出模式：3*3卷积输出四通道特征图(线性激活)==>上采样到target size==>所有旁路输出拼接、融合==>1*1卷积、四通道sigmoid激活输出
         self.side6 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
         self.side5 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
