@@ -356,10 +356,10 @@ class RSUNET(Model):
         hx1_side = self.side1(hx1d)
         
         main_op=self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#主干sigmoid激活输出
-        #return main_op#仅监督训练主干输出版本
+        return main_op#仅监督训练主干输出版本
         
         #多输出版，同时监督训练主干输出与多个旁路分支输出
-        return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
+        #return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
 
 #subclass model.fit train step
 def train_step(self, data):
