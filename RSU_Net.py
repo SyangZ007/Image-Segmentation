@@ -363,7 +363,6 @@ class RSUNET(Model):
         else:
             return main_op#仅监督训练主干输出版本
         
-        
 #subclass model.fit train step,现在改用在notebook导入RSUNET后，重新写一个子类模型
 def train_step(self, data):
     imgs, gt_masks = data
@@ -378,6 +377,10 @@ def train_step(self, data):
     grads = tape.gradient(total_loss, trainable_vars)
     # Update weights
     self.optimizer.apply_gradients(zip(grads, trainable_vars))
+    #update metrics
+    metrics.update_state(y_true,y_pred)
+    #return dict.必须
+    return {'metrics name':metrics.result()}
 
 ##############################Auto-Encoder###########################
 #Auto-Encoder上采样块
