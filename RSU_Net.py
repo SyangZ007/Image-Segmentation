@@ -274,8 +274,9 @@ class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
     上采样到统一尺度输出最终mask
     超参数设计：编码[32,64,128,128,256,512]+解码通道数变化[256,128,128,64,32]'''
-    def __init__(self,in_ch=3,out_ch=4):
+    def __init__(self,in_ch=3,out_ch=4,is_muti_output=False):
         super(RSUNET,self).__init__()
+        self.is_muti_output=is_muti_output#是否采用多输出版本模型
         self.stage1 = RSU7(in_ch,32,64)#size:b*h*w*64
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage2 = RSU6(64,32,128)
@@ -356,12 +357,14 @@ class RSUNET(Model):
         hx1_side = self.side1(hx1d)
         
         main_op=self.outconv(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#主干sigmoid激活输出
-        return main_op#仅监督训练主干输出版本
+        if self.is_muti_output:
+            #多输出版，同时监督训练主干输出与多个旁路分支输出
+            return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
+        else:
+            return main_op#仅监督训练主干输出版本
         
-        #多输出版，同时监督训练主干输出与多个旁路分支输出
-        #return main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)
-
-#subclass model.fit train step
+        
+#subclass model.fit train step,现在改用在notebook导入RSUNET后，重新写一个子类模型
 def train_step(self, data):
     imgs, gt_masks = data
     with tf.GradientTape() as tape:
