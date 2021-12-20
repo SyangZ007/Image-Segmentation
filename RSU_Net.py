@@ -399,24 +399,24 @@ class AutoEncoder(Model):
     '''根据RSU-Net的结构搭建AutoEncoder，提取其encoder权重作为RSU-Net训练的预训练权重'''
     def __init__(self,in_ch=3,out_ch=3):
         super(AutoEncoder,self).__init__()
-        self.stage1 = RSU7(in_ch,16,32)#size:b*h*w*64
+        self.stage1 = RSU7(in_ch,32,64)#size:b*h*w*64
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage2 = RSU6(32,16,64)
+        self.stage2 = RSU6(64,32,128)
         self.pool23 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage3 = RSU5(64,16,64)
+        self.stage3 = RSU5(128,64,256)
         self.pool34 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage4 = RSU4(64,16,128)
+        self.stage4 = RSU4(256,64,256)
         self.pool45 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage5 = RSU4F(128,16,256)
+        self.stage5 = RSU4F(256,128,256)
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        self.stage6 = RSU4F(256,16,512)
+        self.stage6 = RSU4F(256,128,512)
         # AutoEncoder不需要attention，skip connection，旁路输出分支
         # decoder 五个上采样块 transposed_conv + conv_block   
-        self.stage5d = Auto_DecodeBlock(256)
-        self.stage4d = Auto_DecodeBlock(128)
-        self.stage3d = Auto_DecodeBlock(128)
+        self.stage5d = Auto_DecodeBlock(128)
+        self.stage4d = Auto_DecodeBlock(64)
+        self.stage3d = Auto_DecodeBlock(64)
         self.stage2d = Auto_DecodeBlock(64)
-        self.stage1d = Auto_DecodeBlock(32)
+        self.stage1d = Auto_DecodeBlock(64)
         
         self.outconv = layers.Conv2D(out_ch,kernel_size=1,activation='sigmoid')#输出层1*1卷积调整通道数，padding='valid'
     def call(self,x):
