@@ -446,7 +446,7 @@ class AutoEncoder(Model):
         return self.outconv(hx1d)#sigmoid激活输出
     
     def compile(self, optimizer, loss_fn , metrics):
-        super(TrainModel, self).compile()
+        super(AutoEncoder, self).compile()
         self.optimizer = optimizer#传入优化器
         self.loss_fn = loss_fn#定义损失函数
         self.compiled_metrics = metrics
