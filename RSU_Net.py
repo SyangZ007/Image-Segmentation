@@ -445,32 +445,36 @@ class AutoEncoder(Model):
         hx1d = self.stage1d(hx2d)#解码stage5：b*128*800*c
         return self.outconv(hx1d)#sigmoid激活输出
     
-def compile(self, optimizer, loss_fn , metrics):
-    super(AutoEncoder, self).compile()
-    self.optimizer = optimizer#传入优化器
-    self.loss_fn = loss_fn#定义损失函数
-    self.compiled_metrics = metrics
-def train_step(self, data):
-    imgs,imgs_=data
-    with tf.GradientTape() as tape:
-        pred_imgs = self(imgs,training=True)#1、前向传播
+class SelfTrainModel(Model):
+    '''集成keras高层Model，自定义训练循环loop'''
+    def __init__(self,**kwargs):
+        super(SelfTrainModel,self).__init__()
+    def compile(self, optimizer, loss_fn , metrics):
+        super(AutoEncoder, self).compile()
+        self.optimizer = optimizer#传入优化器
+        self.loss_fn = loss_fn#定义损失函数
+        self.compiled_metrics = metrics
+    def train_step(self, data):
+        imgs,imgs_=data
+        with tf.GradientTape() as tape:
+            pred_imgs = self(imgs,training=True)#1、前向传播
+            total_loss = self.loss_fn(pred_imgs, imgs_)#2、loss计算及梯度更新参数
+        grads = tape.gradient(total_loss, self.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))#
+        #3、metrics更新
+        self.compiled_metrics[0].update_state(total_loss),self.compiled_metrics[1].update_state(imgs_,pred_imgs)
+        return {"loss": self.compiled_metrics[0].result(), "accuracy": self.compiled_metrics[1].result()}
+    def test_step(self, data):
+        imgs,imgs_=data
+        pred_imgs = self(imgs,training=False)#1、前向传播
         total_loss = self.loss_fn(pred_imgs, imgs_)#2、loss计算及梯度更新参数
-    grads = tape.gradient(total_loss, self.trainable_weights)
-    self.optimizer.apply_gradients(zip(grads, self.trainable_weights))#
-    #3、metrics更新
-    self.compiled_metrics[0].update_state(total_loss),self.compiled_metrics[1].update_state(imgs_,pred_imgs)
-    return {"loss": self.compiled_metrics[0].result(), "accuracy": self.compiled_metrics[1].result()}
-def test_step(self, data):
-    imgs,imgs_=data
-    pred_imgs = self(imgs,training=False)#1、前向传播
-    total_loss = self.loss_fn(pred_imgs, imgs_)#2、loss计算及梯度更新参数
-    self.compiled_metrics[0].update_state(total_loss)
-    self.compiled_metrics[1].update_state(imgs_,pred_imgs)
-    return {"loss": self.compiled_metrics[0].result(), "accuracy": self.compiled_metrics[1].result()}
-#@property
-def metrics(self):
-    # reset all metrics 
-    return [self.compiled_metrics[0], self.compiled_metrics[1]]
+        self.compiled_metrics[0].update_state(total_loss)
+        self.compiled_metrics[1].update_state(imgs_,pred_imgs)
+        return {"loss": self.compiled_metrics[0].result(), "accuracy": self.compiled_metrics[1].result()}
+    #@property
+    def metrics(self):
+        # reset all metrics 
+        return [self.compiled_metrics[0], self.compiled_metrics[1]]
 
 #创建RSU-NET
 model=RSUNET(in_ch=3,out_ch=4)#num_class=4
