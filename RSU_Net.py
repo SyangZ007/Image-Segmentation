@@ -267,8 +267,10 @@ class AttentionBlock(Model):
         weight_x=self.conv3(weight_x)#[b,w/2,h/2,1]
         weight_x=self.act2(weight_x)#sigmoid输出0~1权值矩阵
         weight_x=self.upsampling(weight_x)#[b,w,h,1]
-        weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
-        return self.multiply([weight_x,x])
+        #广播机制，不用repeat
+        return self.multiply([weight_x,x])#广播、逐元素点乘，输出[b,h,w,c1]
+        #weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
+        #return self.multiply([weight_x,x])
 ##############################RSU-Net###########################
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
