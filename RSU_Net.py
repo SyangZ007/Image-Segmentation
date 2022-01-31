@@ -247,24 +247,25 @@ class SEBlock(Model):
     def __init__(self, mid_channel):
         super(SEBlock,self).__init__()
         self.avg = layers.GlobalAveragePooling2D()#平均池化
-        self.max = layers.GlobalMaxPooling2D()#最大池化
+        #self.max = layers.GlobalMaxPooling2D()#最大池化
         self.reshape = layers.Reshape((1,1,mid_channel))
         #共享的两个全连接(1*1卷积)层
         self.conv1 = layers.Conv2D(filters=mid_channel//4,kernel_size=1,padding='same',activation='relu')
         self.conv2 = layers.Conv2D(filters=mid_channel,kernel_size=1,padding='same')#线性激活
-        self.add = layers.Add()
+        #self.add = layers.Add()
         self.activation = layers.Activation('sigmoid')
         self.multiply=layers.Multiply()
     def call(self,input_x):
         x_avg = self.avg(input_x)#shape:(b,c)
-        x_max = self.max(input_x)#shape:(b,c)
+        #x_max = self.max(input_x)#shape:(b,c)
         x_avg = self.reshape(x_avg)#shape:(b,1,1,c)
-        x_max = self.reshape(x_max)#shape:(b,1,1,c)
+        #x_max = self.reshape(x_max)#shape:(b,1,1,c)
         x_avg = self.conv1(x_avg)#squeeze,shape:(b,1,1,c//4)
         x_avg = self.conv2(x_avg)#excitation,shape:(b,1,1,c)
-        x_max = self.conv1(x_max)#squeeze,shape:(b,1,1,c//4)
-        x_max = self.conv2(x_max)#excitation,shape:(b,1,1,c)
-        x = self.activation(self.add([x_max,x_avg]))#shape:(b,1,1,c) 相加后sigmoid activation输出
+        #x_max = self.conv1(x_max)#squeeze,shape:(b,1,1,c//4)
+        #x_max = self.conv2(x_max)#excitation,shape:(b,1,1,c)
+        #x = self.activation(self.add([x_max,x_avg]))#shape:(b,1,1,c) 相加后sigmoid activation输出
+        x = self.activation(x_avg)
         return self.multiply([x,input_x])
 #Attention Block2
 class AGBlock(Model):
