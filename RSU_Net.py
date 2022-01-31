@@ -241,15 +241,38 @@ class DecodeBlock(Model):
     def call(self,x,skip_x):#完成上采样后的DecodeBlock
         x=self.upsample(x)
         return self.conv_block(self.concat([x,skip_x]))
-#Attention Block
-class AttentionBlock(Model):
-    '''
-    Arg：gate，decoder待上采样输出 x，encoder skip connection输出 mid_channel，通道数
-    Input:x[b,w,h,c1], gate[b,w/2,h/2,c2]
-    return：叠加了attention权重的skip connection输出
-    '''
+#Attention Block1
+class SEBlock(Model):
+    '''Channel Attention'''
     def __init__(self, mid_channel):
-        super(AttentionBlock,self).__init__()
+        super(SEBlock,self).__init__()
+        self.avg = layers.GlobalAveragePooling2D()#平均池化
+        self.max = layers.GlobalMaxPooling2D()#最大池化
+        self.reshape = layers.Reshape((1,1,mid_channel))
+        #共享的两个全连接(1*1卷积)层
+        self.conv1 = layers.Conv2D(filters=mid_channel//4,kernel_size=1,padding='same',activation='relu')
+        self.conv2 = layers.Conv2D(filters=mid_channel,kernel_size=1,padding='same')#线性激活
+        self.add = layers.Add()
+        self.activation = layers.Activation('sigmoid')
+        self.multiply=layers.Multiply()
+    def call(self,input_x):
+        x_avg = self.avg(input_x)#shape:(b,c)
+        x_max = self.max(input_x)#shape:(b,c)
+        x_avg = self.reshape(x_avg)#shape:(b,1,1,c)
+        x_max = self.reshape(x_max)#shape:(b,1,1,c)
+        x_avg = self.conv1(x_avg)#squeeze,shape:(b,1,1,c//4)
+        x_avg = self.conv2(x_avg)#excitation,shape:(b,1,1,c)
+        x_max = self.conv1(x_max)#squeeze,shape:(b,1,1,c//4)
+        x_max = self.conv2(x_max)#excitation,shape:(b,1,1,c)
+        x = self.activation(self.add([x_max,x_avg]))#shape:(b,1,1,c) 相加后sigmoid activation输出
+        return self.multiply([x,input_x])
+#Attention Block2
+class AGBlock(Model):
+    '''Arg：gate，decoder待上采样输出 x，encoder skip connection输出 mid_channel，通道数
+        Input:x[b,w,h,c1], gate[b,w/2,h/2,c2]
+        return：叠加了attention权重的skip connection输出'''
+    def __init__(self, mid_channel):
+        super(AGBlock,self).__init__()
         self.conv1=layers.Conv2D(mid_channel,kernel_size=1,strides=1,padding='same')
         self.conv2=layers.Conv2D(mid_channel,kernel_size=1,strides=2,padding='same')
         self.add=layers.Add()
@@ -267,10 +290,18 @@ class AttentionBlock(Model):
         weight_x=self.conv3(weight_x)#[b,w/2,h/2,1]
         weight_x=self.act2(weight_x)#sigmoid输出0~1权值矩阵
         weight_x=self.upsampling(weight_x)#[b,w,h,1]
-        #广播机制，不用repeat
         return self.multiply([weight_x,x])#广播、逐元素点乘，输出[b,h,w,c1]
-        #weight_x=tf.repeat(weight_x,repeats=x.shape[-1],axis=-1)#[b,w,h,c1]
-        #return self.multiply([weight_x,x])
+    
+class AttentionBlock(Model):
+    '''[(x==>channel attention)+gate]==>AG Gate(spatial attention)==>AttentionBlock output'''
+    def __init__(self,input_channel,mid_channel):
+        super(AttentionBlock,self).__init__()
+        self.channel = SEBlock(input_channel)
+        self.gate = AGBlock(mid_channel)
+    def call(self,x,gate):   
+        x = self.channel(x)#先对x信号施加通道注意力机制
+        return self.gate(x,gate)#再施加门控(spatial)注意力机制
+    
 ##############################RSU-Net###########################
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
@@ -291,11 +322,11 @@ class RSUNET(Model):
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage6 = RSU4F(256,128,512)
         # attention block
-        self.attention1 = AttentionBlock(128)
-        self.attention2 = AttentionBlock(64)
-        self.attention3 = AttentionBlock(64)
-        self.attention4 = AttentionBlock(64)
-        self.attention5 = AttentionBlock(64)
+        self.attention1 = AttentionBlock(input_channel=256,mid_channel=128)
+        self.attention2 = AttentionBlock(input_channel=256,mid_channel=64)
+        self.attention3 = AttentionBlock(input_channel=256,mid_channel=64)
+        self.attention4 = AttentionBlock(input_channel=128,mid_channel=64)
+        self.attention5 = AttentionBlock(input_channel=64,mid_channel=64)
         # decoder 五个上采样块 transposed_conv + conv_block   
         self.stage5d = DecodeBlock(128)
         self.stage4d = DecodeBlock(64)
