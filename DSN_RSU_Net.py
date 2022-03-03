@@ -302,48 +302,7 @@ class AttentionBlock(Model):
     def call(self,x,gate):   
         x = self.channel(x)#先对x信号施加通道注意力机制
         return self.gate(x,gate)#再施加门控(spatial)注意力机制
-      
-total_loss_metric=tf.keras.metrics.Mean(name="total_loss")#记录total loss metric
-target_loss_metric=tf.keras.metrics.Mean(name="target_loss")#记录target loss metric
-
-mean_iou_metric=MeanIOU(name='mean_iou')
-mean_iou_1=IOU_PerClass(name='cls1_iou',index=0)
-mean_iou_2=IOU_PerClass(name='cls2_iou',index=1)
-mean_iou_3=IOU_PerClass(name='cls3_iou',index=2)
-mean_iou_4=IOU_PerClass(name='cls4_iou',index=3)
-######################loss部分#######################
-losses1=sm.losses.DiceLoss(class_weights=[2.5,3.,1.,1.5],per_image=True)
-###################################################
-losses2=sm.losses.BinaryFocalLoss(alpha=0.25, gamma=2.0)
-losses=losses1+losses2
-###################3添加两个变量到Graph###############
-alpha=tf.Variable(1.,trainable=False)#旁路分支损失权重
-STEP=tf.constant(7000,'float32')#总迭代步数
-@tf.function
-def fusion_loss(d0, d1, d2, d3, d4, d5, d6, y_true):
-    tar_loss = losses(y_true,d0)#模型主干输出，采用BCE+DICE损失
-    #旁路输出采用DICE损失监督训练
-    loss1 = losses(y_true,d1)
-    loss2 = losses(y_true,d2)
-    loss3 = losses(y_true,d3)
-    loss4 = losses(y_true,d4)
-    loss5 = losses(y_true,d5)
-    loss6 = losses(y_true,d6)
-    total_loss = tar_loss + alpha*0.4*(loss1+loss2+loss3+loss4+loss5+loss6)
-    alpha.assign_sub(1/STEP)#旁路分支的损失贡献会衰减到0
-    return tar_loss,total_loss
-def fusion_loss_val(d0, d1, d2, d3, d4, d5, d6, y_true):
-    tar_loss = losses(y_true,d0)#模型主干输出，采用BCE+DICE损失
-    #旁路输出采用DICE损失监督训练
-    loss1 = losses(y_true,d1)
-    loss2 = losses(y_true,d2)
-    loss3 = losses(y_true,d3)
-    loss4 = losses(y_true,d4)
-    loss5 = losses(y_true,d5)
-    loss6 = losses(y_true,d6)
-    total_loss = tar_loss + alpha*0.4*(loss1+loss2+loss3+loss4+loss5+loss6)
-    return tar_loss,total_loss
-    
+ 
 ##############################RSU-Net###########################
 class RSUNET(Model):
     '''RSUNET根据U-Net结构形式以RSU块搭建，解码部分为普通Decoder,每个Decoder各尺度旁路输出一个mask，
