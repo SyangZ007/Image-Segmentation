@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers,Model,Sequential
 from tensorflow.keras.activations import sigmoid,softmax
-from RSU_Net import RSU4F,RSU4,RSU5,RSU6,RSU7,AttentionBlock,DecodeBlock
+from RSU_Net import RSU4F,RSU4,RSU5,RSU6,RSU7,AttentionBlock,DecodeBlock,_upsample_like
 import segmentation_models as sm
 ############################Metrics#############################
 #Metrics
