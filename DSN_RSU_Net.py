@@ -195,6 +195,8 @@ class RSUNET(Model):
         # Train themodel
         with tf.GradientTape() as tape:
             d0, d1, d2, d3, d4, d5, d6 = self(imgs,training=True)#1、前向传播
+            print(d0.shape,d6.shape)
+            print(imgs.shape,masks.shape)
             target_loss,total_loss = self.loss_fn(d0, d1, d2, d3, d4, d5, d6, masks)#2、loss计算及梯度更新参数
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))#
