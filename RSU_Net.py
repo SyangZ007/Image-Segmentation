@@ -1,3 +1,5 @@
+'''RSU块concat轴选错了？？？hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],???1???))#skip connection'''
+
 import tensorflow as tf
 from tensorflow.keras import layers,Model,Sequential
 from tensorflow.keras.activations import sigmoid,softmax
