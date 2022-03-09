@@ -118,7 +118,7 @@ class RSU6(Model):#UNet06DRES(nn.Module):
         hx4 = self.rebnconv4(hx)
         hx = self.pool4(hx4)
         hx5 = self.rebnconv5(hx)
-        hx6 = self.rebnconv6(hx)#######bottle neck
+        hx6 = self.rebnconv6(hx5)#######bottle neck这里有改动！hx ==>> hx5###############
         hx5d =  self.rebnconv5d(tf.concat([hx6,hx5],-1))#skip connection
         hx5dup = _upsample_like(hx5d,hx4)
         hx4d = self.rebnconv4d(tf.concat([hx5dup,hx4],-1))#skip connection
