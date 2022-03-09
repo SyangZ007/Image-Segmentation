@@ -148,9 +148,61 @@ def AttentionBlock(input_channel,mid_channel,input_tensor,gate):
     x = SEBlock(input_channel,input_tensor)
     out = AGBlock(mid_channel,x,gate)
     return out
-                                                                                 
-                                                                                 
-  
+##############################RSU-Net###########################
+def RSUNET(in_ch=3,out_ch=4,is_muti_output=False,input_tensor):
+    '''指定输入tensor，返回RSU-Net Model'''
+    #stage 1                     
+    hx1 = RSU7(in_ch,32,64,input_tensor)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx1)
+    #stage 2
+    hx2 = RSU6(64,32,128,hx)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx2)
+    #stage 3
+    hx3 = RSU5(128,64,256,hx)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx3)
+    #stage 4
+    hx4 = RSU5(256,64,256,hx)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx4)
+    #stage 5
+    hx5 = RSU5(256,128,256,hx)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx5)
+    #stage 6 bottle neck
+    hx6 = RSU4F(256,128,512,hx)#size:b*4*25*c  相对于原始尺寸32倍下采样
+    #decoder解码器部分
+    hx6_side = layers.Conv2D(4,3,1,padding='same')(hx6)
+    hx6_side = _upsample_like(hx6_side,hx1)
+    hx5 = AttentionBlock(256,128,hx5,hx6)
+                           
+    hx5d = DecodeBlock(128,hx6,hx5)
+    hx5_side = layers.Conv2D(4,3,1,padding='same')(hx5d)
+    hx5_side = _upsample_like(hx5_side,hx1)
+                           
+    hx4 = AttentionBlock(256,64,hx4,hx5d)
+    hx4d = DecodeBlock(64,hx5d,hx4)                       
+    hx4_side = layers.Conv2D(4,3,1,padding='same')(hx4d)
+    hx4_side = _upsample_like(hx4_side,hx1)
+                          
+    hx3 = AttentionBlock(256,64,hx3,hx4d)
+    hx3d = DecodeBlock(64,hx4d,hx3)                       
+    hx3_side = layers.Conv2D(4,3,1,padding='same')(hx3d)
+    hx3_side = _upsample_like(hx3_side,hx1)
+                           
+    hx2 = AttentionBlock(128,64,hx2,hx3d)
+    hx2d = DecodeBlock(64,hx3d,hx2)                       
+    hx2_side = layers.Conv2D(4,3,1,padding='same')(hx2d)
+    hx2_side = _upsample_like(hx2_side,hx1)
+                        
+    hx1 = AttentionBlock(64,64,hx1,hx2d)
+    hx1d = DecodeBlock(64,hx2d,hx1)                       
+    hx1_side = layers.Conv2D(4,3,1,padding='same')(hx1d)
+                           
+    main_op = layers.Conv2D(out_ch,kernel_size=1,activation='sigmoid')(tf.concat([hx1_side,hx2_side,hx3_side,hx4_side,hx5_side,hx6_side],axis=-1))#主干sigmoid激活输出
+    if is_muti_output:
+        return Model(inputs=input_tensor,outputs=[main_op,tf.math.sigmoid(hx1_side),tf.math.sigmoid(hx2_side),tf.math.sigmoid(hx3_side),
+                           tf.math.sigmoid(hx4_side),tf.math.sigmoid(hx5_side),tf.math.sigmoid(hx6_side)])
+    else:
+        return Model(inputs=input_tensor,outputs=main_op)
+
   
   
   
