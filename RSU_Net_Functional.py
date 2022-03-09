@@ -43,7 +43,7 @@ def RSU7(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hx1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1,tf.concat([hx2dup,hx1],-1))
     return hx1d + hxin
   
- def RSU6(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
+def RSU6(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hxin = REBNCONV(in_ch,out_ch,dilate_rate=1,input_tensor)
     hx1 = REBNCONV(out_ch,mid_ch,dilate_rate=1,hxin)
     hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx1)
@@ -67,7 +67,7 @@ def RSU7(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hx1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1,tf.concat([hx2dup,hx1],-1))
     return hx1d + hxin
   
- def RSU5(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
+def RSU5(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hxin = REBNCONV(in_ch,out_ch,dilate_rate=1,input_tensor)
     hx1 = REBNCONV(out_ch,mid_ch,dilate_rate=1,hxin)
     hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx1)
@@ -76,13 +76,9 @@ def RSU7(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hx3 = REBNCONV(mid_ch,mid_ch,dilate_rate=1,hx)
     hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx3)
     hx4 = REBNCONV(mid_ch,mid_ch,dilate_rate=1,hx)
-    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx4)
-    hx5 = REBNCONV(mid_ch,mid_ch,dilate_rate=1,hx)
-    hx6 = REBNCONV(mid_ch,mid_ch,dilate_rate=2,hx5)#######bottle neck#########
- 
-    hx5d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx6,hx5],-1))
-    hx5dup = _upsample_like(hx5d,hx4)
-    hx4d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx5dup,hx4],-1))
+    hx5 = REBNCONV(mid_ch,mid_ch,dilate_rate=2,hx4)#######bottle neck#########
+     
+    hx4d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx5,hx4],-1))
     hx4dup = _upsample_like(hx4d,hx3)
     hx3d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx4dup,hx3],-1))
     hx3dup = _upsample_like(hx3d,hx2)
@@ -90,44 +86,70 @@ def RSU7(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
     hx2dup = _upsample_like(hx2d,hx1)
     hx1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1,tf.concat([hx2dup,hx1],-1))
     return hx1d + hxin
-  
 
-        self.rebnconvin = REBNCONV(in_ch,out_ch,dilate_rate=1)#输入RSU块第一个卷积块，通道数不变
-        #U-nt encoder部分卷积块
-        self.rebnconv1 = REBNCONV(out_ch,mid_ch,dilate_rate=1)#输入RSU块第二个卷积块，通道数增加
-        self.pool1 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
-        #pooling下采样,pooling stride默认==pooling size,输出尺寸计算采取向上取整ceil
-        self.rebnconv2 = REBNCONV(mid_ch,mid_ch,dilate_rate=1)#输入RSU块第一个卷积块，通道数不变
-        self.pool2 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')
-        self.rebnconv3 = REBNCONV(mid_ch,mid_ch,dilate_rate=1)
-        self.pool3 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')
-        self.rebnconv4 = REBNCONV(mid_ch,mid_ch,dilate_rate=1)
-        #######此处为RSU-5 块的bottle_neck，相比于RSU-7 U-Net encoder少了两层，比RSU-6少了一层
-        self.rebnconv5 = REBNCONV(mid_ch,mid_ch,dilate_rate=2)#使用了空洞卷积，通道数依旧为mid_ch,
-        #######此处为RSU-6 块的bottle_neck
-        self.rebnconv4d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1)
-        self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1)
-        self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1)
-        self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1)
-    def call(self,x):
-        hxin = self.rebnconvin(x)
-        hx1 = self.rebnconv1(hxin)
-        hx = self.pool1(hx1)
-        hx2 = self.rebnconv2(hx)
-        hx = self.pool2(hx2)
-        hx3 = self.rebnconv3(hx)
-        hx = self.pool3(hx3)
-        hx4 = self.rebnconv4(hx)
-        hx5 = self.rebnconv5(hx4)#######bottle neck
-        hx4d = self.rebnconv4d(tf.concat([hx5,hx4],-1))#skip connection
-        hx4dup = _upsample_like(hx4d,hx3)
-        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],1))#skip connection
-        hx3dup = _upsample_like(hx3d,hx2)
-        hx2d = self.rebnconv2d(tf.concat([hx3dup,hx2],-1))#skip connection
-        hx2dup = _upsample_like(hx2d,hx1)
-        hx1d = self.rebnconv1d(tf.concat([hx2dup,hx1],-1))#skip connection
-        return hx1d + hxin
-  
+def RSU4(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
+    hxin = REBNCONV(in_ch,out_ch,dilate_rate=1,input_tensor)
+    hx1 = REBNCONV(out_ch,mid_ch,dilate_rate=1,hxin)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx1)
+    hx2 = REBNCONV(mid_ch,mid_ch,dilate_rate=1,hx)
+    hx = layers.MaxPool2D(pool_size=2,strides=2,padding='same')(hx2)
+    hx3 = REBNCONV(mid_ch,mid_ch,dilate_rate=1,hx)
+    hx4 = REBNCONV(mid_ch,mid_ch,dilate_rate=2,hx3)#######bottle neck#########
+     
+    hx3d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx4,hx3],-1))
+    hx3dup = _upsample_like(hx3d,hx2)
+    hx2d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx3dup,hx2],-1))
+    hx2dup = _upsample_like(hx2d,hx1)
+    hx1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1,tf.concat([hx2dup,hx1],-1))
+    return hx1d + hxin
+
+def RSU4F(in_ch=3, mid_ch=12, out_ch=3, input_tensor):
+    hxin = REBNCONV(in_ch,out_ch,dilate_rate=1,input_tensor)
+    hx1 = REBNCONV(out_ch,mid_ch,dilate_rate=1,hxin)
+    hx2 = REBNCONV(mid_ch,mid_ch,dilate_rate=2,hx1)
+    hx3 = REBNCONV(mid_ch,mid_ch,dilate_rate=4,hx2)
+    hx4 = REBNCONV(mid_ch,mid_ch,dilate_rate=8,hx3)#######bottle neck#########
+     
+    hx3d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=4,tf.concat([hx4,hx3],-1))
+    hx2d = REBNCONV(mid_ch*2,mid_ch,dilate_rate=1,tf.concat([hx3d,hx2],-1))
+    hx1d = REBNCONV(mid_ch*2,out_ch,dilate_rate=1,tf.concat([hx2d,hx1],-1))
+    return hx1d + hxin
+
+def DecodeBlock(num_filters,input_tensor,skip_tensor):
+    x = layers.Conv2DTranspose(filters=num_filters,kernel_size=3,strides=2,padding='same',activation='relu')(input_tensor)#上采样
+    x = layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False)(tf.concat([x,skip_tensor],axis=-1)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2D(num_filters/2,kernel_size=3,padding='same',use_bias=False)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    return x                                                                                 
+
+def SEBlock(mid_channel,input_tensor):
+    x_avg = layers.GlobalAveragePooling2D()(input_tensor)
+    x_avg = layers.Reshape((1,1,mid_channel))(x_avg)   
+    x_avg = layers.Conv2D(filters=mid_channel//4,kernel_size=1,padding='same',activation='relu')(x_avg)
+    x_avg = layers.Conv2D(filters=mid_channel,kernel_size=1,padding='same',activation='sigmoid')(x_avg)
+    out = layers.Multiply()([x_avg,input_tensor])
+    return out
+
+def AGBlock(mid_channel,input_tensor,gate):
+    phi_g=layers.Conv2D(mid_channel,kernel_size=1,strides=1,padding='same')(gate)
+    theta_x=layers.Conv2D(mid_channel,kernel_size=1,strides=2,padding='same')(input_tensor)
+    weight_x=layers.Add()([phi_g,theta_x])
+    weight_x=layers.Activation('relu')(weight_x)
+    weight_x=layers.Conv2D(1,kernel_size=1,strides=1,padding='same',activation='sigmoid)(weight_x)
+    weight_x=layers.UpSampling2D(size=(2,2))(weight_x)
+    out=layers.Multiply([weight_x,input_tensor])
+    return out
+                 
+def AttentionBlock(input_channel,mid_channel,input_tensor,gate):
+    '''[(x==>channel attention)+gate]==>AG Gate(spatial attention)==>AttentionBlock output'''
+    x = SEBlock(input_channel,input_tensor)
+    out = AGBlock(mid_channel,x,gate)
+    return out
+                                                                                 
+                                                                                 
   
   
   
