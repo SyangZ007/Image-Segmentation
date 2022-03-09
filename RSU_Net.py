@@ -1,5 +1,3 @@
-'''RSU块concat轴选错了？？？hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],???1???))#skip connection'''
-
 import tensorflow as tf
 from tensorflow.keras import layers,Model,Sequential
 from tensorflow.keras.activations import sigmoid,softmax
@@ -76,7 +74,7 @@ class RSU7(Model):
         hx5dup = _upsample_like(hx5d,hx4)
         hx4d = self.rebnconv4d(tf.concat([hx5dup,hx4],-1))#skip connection
         hx4dup = _upsample_like(hx4d,hx3)
-        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],1))#skip connection
+        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],-1))#skip connection 这里有改动！axis=1 ==>> axis=-1###############
         hx3dup = _upsample_like(hx3d,hx2)
         hx2d = self.rebnconv2d(tf.concat([hx3dup,hx2],-1))#skip connection
         hx2dup = _upsample_like(hx2d,hx1)
@@ -123,7 +121,7 @@ class RSU6(Model):#UNet06DRES(nn.Module):
         hx5dup = _upsample_like(hx5d,hx4)
         hx4d = self.rebnconv4d(tf.concat([hx5dup,hx4],-1))#skip connection
         hx4dup = _upsample_like(hx4d,hx3)
-        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],1))#skip connection
+        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],-1))#skip connection 这里有改动！axis=1 ==>> axis=-1###############
         hx3dup = _upsample_like(hx3d,hx2)
         hx2d = self.rebnconv2d(tf.concat([hx3dup,hx2],-1))#skip connection
         hx2dup = _upsample_like(hx2d,hx1)
@@ -163,7 +161,7 @@ class RSU5(Model):#UNet05DRES(nn.Module):
         hx5 = self.rebnconv5(hx4)#######bottle neck
         hx4d = self.rebnconv4d(tf.concat([hx5,hx4],-1))#skip connection
         hx4dup = _upsample_like(hx4d,hx3)
-        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],1))#skip connection
+        hx3d = self.rebnconv3d(tf.concat([hx4dup,hx3],-1))#skip connection 这里有改动！axis=1 ==>> axis=-1###############
         hx3dup = _upsample_like(hx3d,hx2)
         hx2d = self.rebnconv2d(tf.concat([hx3dup,hx2],-1))#skip connection
         hx2dup = _upsample_like(hx2d,hx1)
@@ -193,7 +191,7 @@ class RSU4(Model):
         hx = self.pool2(hx2)
         hx3 = self.rebnconv3(hx)
         hx4 = self.rebnconv4(hx3)#######bottle neck
-        hx3d = self.rebnconv3d(tf.concat([hx4,hx3],1))#skip connection
+        hx3d = self.rebnconv3d(tf.concat([hx4,hx3],-1))#skip connection 这里有改动！axis=1 ==>> axis=-1###############
         hx3dup = _upsample_like(hx3d,hx2)
         hx2d = self.rebnconv2d(tf.concat([hx3dup,hx2],-1))#skip connection
         hx2dup = _upsample_like(hx2d,hx1)
