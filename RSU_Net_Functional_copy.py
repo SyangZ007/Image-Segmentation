@@ -307,7 +307,7 @@ class RSUNET1(Model):
     上采样到统一尺度输出最终mask
     超参数设计：编码[32,64,128,128,256,512]+解码通道数变化[256,128,128,64,32]'''
     def __init__(self,in_ch=3,out_ch=4,is_muti_output=False):
-        super(RSUNET,self).__init__()
+        super(RSUNET1,self).__init__()
         self.is_muti_output=is_muti_output#是否采用多输出版本模型
         self.stage1 = RSU7(in_ch,32,64)#size:b*h*w*64
         self.pool12 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
