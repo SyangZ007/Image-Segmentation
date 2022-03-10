@@ -4,7 +4,7 @@ from tensorflow.keras.activations import sigmoid,softmax
 
 class REBNCONV(layers.Layer):
     '''卷积块：Conv+BN+Relu>>>某些层可能会使用空洞卷积'''
-    def __init__(self,in_ch=3,out_ch=3,dilate_rate=1,name=):
+    def __init__(self,in_ch=3,out_ch=3,dilate_rate=1):
         super(REBNCONV,self).__init__()
         self.conv=layers.Conv2D(out_ch,kernel_size=3,padding='same',
                     use_bias=False,dilation_rate=dilate_rate)
@@ -321,25 +321,10 @@ class RSUNET1(Model):
         self.pool56 = layers.MaxPool2D(pool_size=2,strides=2,padding='same')#ceil_mode=True
         self.stage6 = RSU4F(256,128,512)
         # attention block
-        self.attention1 = AttentionBlock(input_channel=256,mid_channel=128)
-        self.attention2 = AttentionBlock(input_channel=256,mid_channel=64)
-        self.attention3 = AttentionBlock(input_channel=256,mid_channel=64)
-        self.attention4 = AttentionBlock(input_channel=128,mid_channel=64)
-        self.attention5 = AttentionBlock(input_channel=64,mid_channel=64)
         # decoder 五个上采样块 transposed_conv + conv_block   
-        self.stage5d = DecodeBlock(128)
-        self.stage4d = DecodeBlock(64)
-        self.stage3d = DecodeBlock(64)
-        self.stage2d = DecodeBlock(64)
-        self.stage1d = DecodeBlock(64)
+
         # decoder 6个旁路输出分支,旁路输出模式：3*3卷积输出四通道特征图(线性激活)==>上采样到target size==>所有旁路输出拼接、融合==>1*1卷积、四通道sigmoid激活输出
         self.side6 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.side5 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.side4 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.side3 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.side2 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.side1 = layers.Conv2D(4,3,1,padding='same')#,activation='relu')
-        self.outconv = layers.Conv2D(out_ch,kernel_size=1,activation='sigmoid')#输出层1*1卷积调整通道数，padding='valid'
     def call(self,x):
         #stage 1
         hx1 = self.stage1(x)#size:b*128*800*c
